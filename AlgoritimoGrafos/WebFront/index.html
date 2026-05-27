@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editor de Grafos</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <div id="triple-form">
+      <h2>Adicionar conexão</h2>
+      <div id="form-fields">
+        <div class="field-group">
+          <label for="input-teto">Teto</label>
+          <input type="text" id="input-teto" placeholder="Ex: Animal" />
+        </div>
+        <div class="connector-icon">|</div>
+        <div class="field-group">
+          <label for="input-meio">Meio</label>
+          <input type="text" id="input-meio" placeholder="Ex: Cachorro" />
+        </div>
+        <div class="connector-icon">|</div>
+        <div class="field-group">
+          <label for="input-piso">Piso</label>
+          <input type="text" id="input-piso" placeholder="Ex: Pastor Alemão" />
+        </div>
+      </div>
+      <div id="form-actions">
+        <button id="add-triple-btn">Adicionar ao grafo</button>
+        <button id="clear-btn">Limpar tudo</button>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="graph-canvas"></canvas>
+    </div>
+    <div id="hint">
+      💡 Arraste os nós para mover · Clique para selecionar · Delete remove o selecionado
+    </div>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
