@@ -179,48 +179,85 @@ function draw() {
     const isSel = selected && selected.id === nd.id;
     const r = 28;
 
+    // determina forma
+    let shape = 'circle';
+    if (nd.group === 'teto') shape = 'tri-up';
+    else if (nd.group === 'piso') shape = 'tri-down';
+    else if (nd.group === 'relacionado') shape = nd.relIdx === 0 ? 'hexagon' : 'diamond';
+
+    function buildPath() {
+      ctx.beginPath();
+      if (shape === 'circle') {
+        ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+      } else if (shape === 'tri-up') {
+        const h = r * 1.8;
+        ctx.moveTo(nd.x,         nd.y - h * 0.62);
+        ctx.lineTo(nd.x + r * 1.1, nd.y + h * 0.38);
+        ctx.lineTo(nd.x - r * 1.1, nd.y + h * 0.38);
+        ctx.closePath();
+      } else if (shape === 'tri-down') {
+        const h = r * 1.8;
+        ctx.moveTo(nd.x,         nd.y + h * 0.62);
+        ctx.lineTo(nd.x + r * 1.1, nd.y - h * 0.38);
+        ctx.lineTo(nd.x - r * 1.1, nd.y - h * 0.38);
+        ctx.closePath();
+      } else if (shape === 'diamond') {
+        ctx.moveTo(nd.x,      nd.y - r * 1.3);
+        ctx.lineTo(nd.x + r * 1.1, nd.y);
+        ctx.lineTo(nd.x,      nd.y + r * 1.3);
+        ctx.lineTo(nd.x - r * 1.1, nd.y);
+        ctx.closePath();
+      } else if (shape === 'hexagon') {
+        for (let i = 0; i < 6; i++) {
+          const a = Math.PI / 180 * (60 * i - 30);
+          const px = nd.x + r * 1.1 * Math.cos(a);
+          const py = nd.y + r * 1.1 * Math.sin(a);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+    }
+
+    // pulso de destaque
     if (nd.highlight) {
       const pulse = Math.sin(nd.pulse || 0);
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(nd.x, nd.y, r + 6 + pulse * 4, 0, Math.PI * 2);
       ctx.strokeStyle = c.stroke;
-      ctx.globalAlpha = 0.25 + 0.15 * pulse;
+      ctx.globalAlpha = 0.22 + 0.13 * pulse;
       ctx.lineWidth = 2;
+      // anel externo: escala o path levemente
+      ctx.save();
+      ctx.translate(nd.x, nd.y);
+      const sc = 1 + (0.18 + 0.08 * pulse);
+      ctx.scale(sc, sc);
+      ctx.translate(-nd.x, -nd.y);
+      buildPath();
+      ctx.restore();
       ctx.stroke();
       ctx.restore();
     }
 
+    // forma principal
     ctx.save();
     if (isSel) { ctx.shadowColor = c.stroke; ctx.shadowBlur = 14; }
-    ctx.beginPath();
-    ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+    buildPath();
     ctx.fillStyle = c.fill;
     ctx.fill();
     ctx.strokeStyle = c.stroke;
-    ctx.lineWidth = (isSel || nd.highlight) ? 2.5 : 1;
+    ctx.lineWidth = (isSel || nd.highlight) ? 2.5 : 1.2;
     ctx.stroke();
     ctx.restore();
 
-    // pin indicator
-    if (nd.fixed) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(nd.x, nd.y - r + 5, 3, 0, Math.PI * 2);
-      ctx.fillStyle = c.stroke;
-      ctx.globalAlpha = 0.5;
-      ctx.fill();
-      ctx.restore();
-    }
-
+    // label
     ctx.save();
-    ctx.font = '500 13px sans-serif';
+    ctx.font = '500 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = c.text;
     let label = nd.label;
-    if (ctx.measureText(label).width > r * 2 - 8) {
-      while (ctx.measureText(label + '…').width > r * 2 - 8 && label.length > 1)
+    const maxW = r * 1.8;
+    if (ctx.measureText(label).width > maxW) {
+      while (ctx.measureText(label + '…').width > maxW && label.length > 1)
         label = label.slice(0, -1);
       label += '…';
     }
@@ -286,7 +323,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   const allLabels = [];
   tetos.forEach(l => { const n = createNode(l, 'teto');        n.fixed = true; allLabels.push(l); });
   pisos.forEach(l  => { const n = createNode(l, 'piso');        n.fixed = true; allLabels.push(l); });
-  rels.forEach(l   => { const n = createNode(l, 'relacionado'); n.fixed = true; allLabels.push(l); });
+  rels.forEach((l, i) => { const n = createNode(l, 'relacionado'); n.fixed = true; n.relIdx = i; allLabels.push(l); });
 
   layoutNodes(nodes);
   pairs = generatePairs(allLabels);
@@ -440,7 +477,19 @@ document.getElementById('reset-btn2').addEventListener('click', resetAll);
 // ── Mouse ─────────────────────────────────────────────────
 
 function nodeAt(x, y) {
-  return nodes.slice().reverse().find(n => Math.hypot(n.x - x, n.y - y) <= 28);
+  return nodes.slice().reverse().find(nd => {
+    const dx = x - nd.x, dy = y - nd.y;
+    const r = 28;
+    if (nd.group === 'teto' || nd.group === 'piso') {
+      // bounding box do triângulo
+      return Math.abs(dx) <= r * 1.1 && Math.abs(dy) <= r * 1.1;
+    }
+    if (nd.group === 'relacionado') {
+      // bounding box do hexágono ou diamante
+      return Math.abs(dx) <= r * 1.1 && Math.abs(dy) <= r * 1.3;
+    }
+    return Math.hypot(dx, dy) <= r;
+  });
 }
 
 function getPos(e) {
